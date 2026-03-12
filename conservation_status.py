@@ -4,34 +4,20 @@ import pyinaturalist as pin # type: ignore
 
 obs = pin.get_observations(
     place_id=18,
-    per_page=200
+    per_page=200,
+    csi=["EN", "CR", "VU"]
 )["results"]
 
-taxon_ids = set()
+endangered_taxa = []
 
 for o in obs:
-    taxon = o.get("taxon")
-    if taxon:
-        taxon_ids.add(taxon["id"])
+    taxa_list = {}
+    taxa_list['name'] = o['taxon']['name']
+    taxa_list['id'] = o['taxon']['id']
+    taxa_list['statuses'] = o['taxon'].get('conservation_status')['status_name'] if o['taxon'].get('conservation_status') else None
+    if taxa_list not in endangered_taxa:
+        endangered_taxa.append(taxa_list)
 
-taxon_ids = list(taxon_ids)
+for t in endangered_taxa:
+    print(t['name'], " | ", t['statuses'])
 
-taxa = []
-
-batch_size = 30
-
-for i in range(0, len(taxon_ids), batch_size):
-    batch = taxon_ids[i:i+batch_size]
-    r = pin.get_taxa(ids=batch)
-    taxa.extend(r["results"])
-
-endangered = []
-
-for t in taxa:
-    statuses = t.get("conservation_statuses", [])
-    for s in statuses:
-        if s["status"] in ["EN", "CR", "VU"]:
-            endangered.append((t["name"], s["status"]))
-
-for name, status in endangered:
-    print(name, status)
