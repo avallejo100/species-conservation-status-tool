@@ -19,11 +19,11 @@ parser.add_argument(
     help='Set the logging level (default: WARNING)'
 )
 parser.add_argument(
-    '-p', '--place_id',
+    '-p', '--place_name',
     type=str,
     required=False,
-    default = 18,
-    help='Place ID for iNaturalist API (default: 18)'
+    default = 'Texas',
+    help='Place name for iNaturalist API (default: Texas)'
 )
 args = parser.parse_args()
 
@@ -36,6 +36,17 @@ logging.basicConfig(level=args.loglevel, format=format_string)
 # -------------------------
 # FUNCTIONS
 # -------------------------
+
+def grab_place_id(name: str) -> int | None:
+    '''
+    Grabs the place ID from iNaturalist API for a given place name.
+    Args:
+        name (str): The name of the place to fetch the ID for.
+    Returns:
+        int: The ID of the place.
+    '''
+    results = pin.get_places_autocomplete(name=name)
+    return results[0]['id'] if results else None
 
 def grab_observations(place_id: int) -> list:
     '''
@@ -85,9 +96,17 @@ def parse_observations(obs: list) -> list:
 if __name__ == "__main__":
     r = redis.Redis(host='127.0.0.1', port=6379, db=0)
 
-    logging.info(f"Starting conservation status retrieval for place_id: {args.place_id}")
-    observations = grab_observations(args.place_id)
-    endangered_taxa = parse_observations(observations)
-    logging.info(f"Retrieved endangered taxa information for place_id: {args.place_id}")
+    place_id = grab_place_id(args.place_name)
+    logging.info(f"Starting conservation status retrieval for place_id: {place_id}")
+    
+    try:
+        if place_id is None:
+            raise ValueError(f"Place name '{args.place_name}' not found in iNaturalist API.")
+    except ValueError as e:
+        logging.error(e)
+        exit(1)
 
+    observations = grab_observations(place_id)
+    endangered_taxa = parse_observations(observations)
+    logging.info(f"Retrieved endangered taxa information for place_id: {place_id}")
     print(json.dumps(endangered_taxa, indent=2))
