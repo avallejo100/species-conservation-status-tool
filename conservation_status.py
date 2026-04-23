@@ -71,6 +71,30 @@ def grab_observations(place_id: int) -> list:
         r.set(key, json.dumps(observations, default=str))
         return observations
 
+def normalize_status(s: str | None) -> str | None:
+    """
+    Normalizes conservation status strings to a standard format.
+    Args:
+        s (string or None): The conservation status string to normalize.
+    Returns:
+        str or None: The normalized conservation status string.
+    """
+    if not s:
+        return None
+
+    s = s.lower()
+
+    mapping = {
+        "vu": "Vulnerable",
+        "vulnerable": "Vulnerable",
+        "en": "Endangered",
+        "endangered": "Endangered",
+        "cr": "Critically Endangered",
+        "critically endangered": "Critically Endangered",
+    }
+
+    return mapping.get(s, s.title())
+
 def parse_observations(obs: list) -> list:
     '''
     Parses a list of observations to extract taxa information and conservation statuses.
@@ -84,7 +108,8 @@ def parse_observations(obs: list) -> list:
         taxa_list = {}
         taxa_list['name'] = o['taxon']['name']
         taxa_list['id'] = o['taxon']['id']
-        taxa_list['statuses'] = o['taxon'].get('conservation_status')['status_name'] if o['taxon'].get('conservation_status') else None
+        status = o['taxon'].get('conservation_status')['status_name'] if o['taxon'].get('conservation_status') else None
+        taxa_list['statuses'] = normalize_status(status) if status else None
         if taxa_list not in endangered_taxa:
             endangered_taxa.append(taxa_list)
     return endangered_taxa
