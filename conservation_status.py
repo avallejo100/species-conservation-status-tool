@@ -50,14 +50,13 @@ def grab_place_id(name: str) -> int | None:
 
 def grab_observations(place_id: int) -> list:
     '''
-    Fetches observations from iNaturalist API for a given place_id, and saves results to Redis.
+    Fetches observations from iNaturalist API for a given place_id, checking Redis cache first to avoid redundant API calls.
     Args:
         place_id (int): The ID of the place to fetch observations for.
     Returns:
         list: A list of observations fetched from the iNaturalist API or Redis database.'''
 
     key = f'observations_{place_id}'
-
     if r.exists(key):
         logging.debug("Observations already exist in Redis. Fetching from cache.")
         return json.loads(r.get(key))
@@ -68,7 +67,6 @@ def grab_observations(place_id: int) -> list:
             per_page=200,
             csi=["EN", "CR", "VU"]
         )["results"]
-    r.set(key, json.dumps(observations, default=str))
     return observations
 
 def normalize_status(s: str | None) -> str | None:
@@ -134,4 +132,8 @@ if __name__ == "__main__":
     observations = grab_observations(place_id)
     endangered_taxa = parse_observations(observations)
     logging.info(f"Retrieved endangered taxa information for place_id: {place_id}")
+
+    # Save the parsed endangered taxa information in Redis for caching
+    key = f'observations_{place_id}'
+    r.set(key, json.dumps(endangered_taxa, default=str))
     print(json.dumps(endangered_taxa, indent=2))
