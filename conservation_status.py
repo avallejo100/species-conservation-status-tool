@@ -45,8 +45,8 @@ def grab_place_id(name: str) -> int | None:
     Returns:
         int: The ID of the place.
     '''
-    results = pin.get_places_autocomplete(name=name)
-    return results[0]['id'] if results else None
+    response = pin.get_places_autocomplete(name)
+    return response["results"][0]["id"] if response["results"] else None
 
 def grab_observations(place_id: int) -> list:
     '''
@@ -68,7 +68,7 @@ def grab_observations(place_id: int) -> list:
             per_page=200,
             csi=["EN", "CR", "VU"]
         )["results"]
-        r.set(key, json.dumps(observations))
+        r.set(key, json.dumps(observations, default=str))
         return observations
 
 def parse_observations(obs: list) -> list:
