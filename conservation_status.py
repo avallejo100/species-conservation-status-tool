@@ -68,8 +68,8 @@ def grab_observations(place_id: int) -> list:
             per_page=200,
             csi=["EN", "CR", "VU"]
         )["results"]
-        r.set(key, json.dumps(observations, default=str))
-        return observations
+    r.set(key, json.dumps(observations, default=str))
+    return observations
 
 def normalize_status(s: str | None) -> str | None:
     """
@@ -112,14 +112,14 @@ def parse_observations(obs: list) -> list:
         taxa_list['statuses'] = normalize_status(status) if status else None
         if taxa_list not in endangered_taxa:
             endangered_taxa.append(taxa_list)
-    return endangered_taxa
+    return endangered_taxa # store this in Redis for caching instead
 
 # -------------------------
 # MAIN
 # -------------------------
 
 if __name__ == "__main__":
-    r = redis.Redis(host='127.0.0.1', port=6379, db=0)
+    r = redis.Redis(host='127.0.0.1', port=6379, db=0, decode_responses=True)
 
     place_id = grab_place_id(args.place_name)
     logging.info(f"Starting conservation status retrieval for place_id: {place_id}")
