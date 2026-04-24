@@ -1,30 +1,12 @@
-import json
-import redis
-import pandas as pd
-import plotly.express as px
-
 from dash import Dash, html, dcc
 from dash import Input, Output, State
 import dash_ag_grid as dag
+import pandas as pd
+import plotly.express as px
 
-from conservation_status import grab_place_id
-
-# -------------------------
-# app + redis
-# -------------------------
+from conservation_status import get_species_info
 
 app = Dash(__name__)
-
-r = redis.Redis(
-    host="127.0.0.1",
-    port=6379,
-    db=0,
-    decode_responses=True
-)
-
-# -------------------------
-# layout
-# -------------------------
 
 app.layout = html.Div([
 
@@ -46,22 +28,23 @@ app.layout = html.Div([
     html.Br(),
 
     html.Div(id="summary"),
-
-    dcc.Graph(id="status-plot"),
-
-    dag.AgGrid(
-        id="species-table",
-        rowData=[],
-        columnDefs=[],
-        defaultColDef={"sortable": True, "filter": True}
+    dcc.Loading(
+    type="circle",
+    children=[
+        dcc.Graph(id="status-plot"),
+        dag.AgGrid(
+            id="species-table",
+            rowData=[],
+            columnDefs=[],
+            defaultColDef={
+                "sortable": True,
+                "filter": True
+            }
+        )
+    ]
     )
-
 ])
 
-
-# -------------------------
-# callback
-# -------------------------
 
 @app.callback(
     Output("summary","children"),
@@ -73,54 +56,39 @@ app.layout = html.Div([
 )
 def update_dashboard(n_clicks, place_name):
 
-    place_id = grab_place_id(place_name)
+    species = get_species_info(place_name)
 
-    if place_id is None:
+    if not species:
         return (
-            "Place not found",
+            "No data found",
             {},
             [],
             []
         )
 
-    raw = r.get(f"observations_{place_id}")
+    df = pd.DataFrame(species)
 
-    if raw is None:
-        return (
-            f"No cached data for {place_name}",
-            {},
-            [],
-            []
-        )
 
-    data = json.loads(raw)
-
-    df = pd.DataFrame(data)
-
-    # If using parsed endangered_taxa data:
-    if "statuses" not in df.columns:
-        return (
-            "Statuses column missing in cached data",
-            {},
-            [],
-            []
-        )
-
-    # Bar chart
-    counts = (
+    status_counts = (
         df["statuses"]
+        .fillna("Unknown")
         .value_counts()
         .reset_index()
     )
 
-    counts.columns = ["Status","Count"]
+    status_counts.columns = [
+        "Status",
+        "Count"
+    ]
+
 
     fig = px.bar(
-        counts,
+        status_counts,
         x="Status",
         y="Count",
-        title=f"Conservation Status in {place_name}"
+        title=f"Conservation Status Distribution: {place_name}"
     )
+
 
     columns = [
         {"field":"name"},
@@ -128,8 +96,9 @@ def update_dashboard(n_clicks, place_name):
         {"field":"statuses"}
     ]
 
+
     return (
-        f"{len(df)} endangered species loaded",
+        f"{len(df)} endangered species found in {place_name}",
         fig,
         df.to_dict("records"),
         columns
