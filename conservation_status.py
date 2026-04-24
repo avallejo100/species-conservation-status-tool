@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
+import pandas as pd # type: ignore
+
 import redis # type: ignore
 import argparse
 import logging
 import socket
 import json
 import pyinaturalist as pin # type: ignore
+
+# -------------------------
+# Redis setup
+# -------------------------
+r = redis.Redis(host='127.0.0.1', port=6379, db=0, decode_responses=True)
 
 # -------------------------
 # Logging setup
@@ -80,15 +87,24 @@ def normalize_status(s: str | None) -> str | None:
     if not s:
         return None
 
-    s = s.lower()
+    s = s.lower().strip()
 
     mapping = {
-        "vu": "Vulnerable",
-        "vulnerable": "Vulnerable",
-        "en": "Endangered",
-        "endangered": "Endangered",
-        "cr": "Critically Endangered",
-        "critically endangered": "Critically Endangered",
+    "vu": "Vulnerable",
+    "vulnerable": "Vulnerable",
+    "vulnerable (g3)": "Vulnerable",
+
+    "en": "Endangered",
+    "endangered": "Endangered",
+
+    "cr": "Critically Endangered",
+    "critically endangered": "Critically Endangered",
+
+    "s2": "Imperiled",
+    "imperiled": "Imperiled",
+
+    "s1": "Critically Imperiled",
+    "critically imperiled": "Critically Imperiled"
     }
 
     return mapping.get(s, s.title())
@@ -110,30 +126,51 @@ def parse_observations(obs: list) -> list:
         taxa_list['statuses'] = normalize_status(status) if status else None
         if taxa_list not in endangered_taxa:
             endangered_taxa.append(taxa_list)
-    return endangered_taxa # store this in Redis for caching instead
+    return endangered_taxa # store this in redis for caching instead
+
+def get_species_info(place_name: str) -> list:
+    '''
+    Retrieves species information for a given place ID and name, utilizing Redis for caching.
+    Args:
+        place_id (int): The ID of the place to fetch species information for.
+        place_name (str): The name of the place to include in the output.
+    Returns:
+        tuple: A tuple containing a message, a Plotly figure, a list of species records, and column definitions.'''
+    place_name_clean = place_name.strip().lower()
+    place_id = grab_place_id(place_name_clean)
+
+    if place_id is None:
+        logging.error(f"Place name '{place_name}' not found in iNaturalist API.")
+        return []
+    
+    key = f'observations_{place_id}'
+
+    if not r.exists(key):
+        logging.debug(f"No cached data for place_id {place_id}. Fetching from iNaturalist API.")
+        observations = grab_observations(place_id)
+        endangered_taxa = parse_observations(observations)
+        
+        r.set(key, json.dumps(endangered_taxa, default=str))
+    else:
+        logging.debug(f"Cached data found for place_id {place_id}. Fetching from Redis.")
+        endangered_taxa = json.loads(r.get(key))
+    
+    if not endangered_taxa:
+        logging.error(f"No endangered species data found for place_id {place_id}.")
+        return []
+    return endangered_taxa
+
 
 # -------------------------
 # MAIN
 # -------------------------
 
 if __name__ == "__main__":
-    r = redis.Redis(host='127.0.0.1', port=6379, db=0, decode_responses=True)
-
-    place_id = grab_place_id(args.place_name)
-    logging.info(f"Starting conservation status retrieval for place_id: {place_id}")
-    
     try:
-        if place_id is None:
-            raise ValueError(f"Place name '{args.place_name}' not found in iNaturalist API.")
-    except ValueError as e:
-        logging.error(e)
-        exit(1)
+        logging.info(f"Fetching species information for place: {args.place_name}")
+        endangered_taxa = get_species_info(args.place_name)
+    except Exception as e:
+        logging.error(f"An error occurred while fetching species information: {e}")
+        endangered_taxa = []
 
-    observations = grab_observations(place_id)
-    endangered_taxa = parse_observations(observations)
-    logging.info(f"Retrieved endangered taxa information for place_id: {place_id}")
-
-    # Save the parsed endangered taxa information in Redis for caching
-    key = f'observations_{place_id}'
-    r.set(key, json.dumps(endangered_taxa, default=str))
     print(json.dumps(endangered_taxa, indent=2))
