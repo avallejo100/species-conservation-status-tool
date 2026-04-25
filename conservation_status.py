@@ -71,7 +71,7 @@ def grab_observations(place_id: int) -> list:
         logging.debug("Fetching observations from iNaturalist API.")
         observations = pin.get_observations(
             place_id=place_id,
-            per_page=200,
+            per_page=500,
             csi=["EN", "CR", "VU"]
         )["results"]
     return observations
@@ -85,29 +85,28 @@ def normalize_status(s: str | None) -> str | None:
         str or None: The normalized conservation status string.
     """
     if not s:
-        return None
+        return "Unknown"
 
     s = s.lower().strip()
 
-    mapping = {
-    "vu": "Vulnerable",
-    "vulnerable": "Vulnerable",
-    "vulnerable (g3)": "Vulnerable",
+    vulnerable = ["vulnerable", "vu", "g3", "s3", "vulnerable (vu)", "vulnerable (g3)", "vulnerable (s3)"]
+    endangered = ["endangered", "en", "endangered (en)", "s2", "g2", "endangered (s2)", "endangered (g2)"]
+    critically_endangered = ["critically endangered", "cr", "critically endangered (cr)", "s1", "g1", "critically endangered (s1)", "critically endangered (g1)"]
+    imperiled = ["imperiled", "imperiled (g2)", "imperiled (s2)", "imp"]
+    critically_imperiled = ["critically imperiled", "critically imperiled (g1)", "critically imperiled (s1)"]
 
-    "en": "Endangered",
-    "endangered": "Endangered",
-
-    "cr": "Critically Endangered",
-    "critically endangered": "Critically Endangered",
-
-    "s2": "Imperiled",
-    "imperiled": "Imperiled",
-
-    "s1": "Critically Imperiled",
-    "critically imperiled": "Critically Imperiled"
-    }
-
-    return mapping.get(s, s.title())
+    if s in vulnerable:
+        return "Vulnerable"
+    elif s in endangered:
+        return "Endangered"
+    elif s in critically_endangered:
+        return "Critically Endangered"
+    elif s in imperiled:
+        return "Imperiled"
+    elif s in critically_imperiled:
+        return "Critically Imperiled"
+    else:
+        return "Other"
 
 def parse_observations(obs: list) -> list:
     '''
@@ -120,10 +119,14 @@ def parse_observations(obs: list) -> list:
     endangered_taxa = []
     for o in obs:
         taxa_list = {}
-        taxa_list['name'] = o['taxon']['name']
-        taxa_list['id'] = o['taxon']['id']
+
+        taxa_list['taxon_name'] = o['taxon']["iconic_taxon_name"] if o['taxon'].get("iconic_taxon_name") else None
+        taxa_list['common_name'] = o['taxon']['preferred_common_name'] if o['taxon'].get('preferred_common_name') else None
+        taxa_list['scientific_name'] = o['taxon']['name'] if o['taxon'].get('name') else None
+
         status = o['taxon'].get('conservation_status')['status_name'] if o['taxon'].get('conservation_status') else None
         taxa_list['statuses'] = normalize_status(status) if status else None
+
         if taxa_list not in endangered_taxa:
             endangered_taxa.append(taxa_list)
     return endangered_taxa # store this in redis for caching instead
