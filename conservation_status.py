@@ -127,6 +127,8 @@ def parse_observations(obs: list) -> list:
         status = o['taxon'].get('conservation_status')['status_name'] if o['taxon'].get('conservation_status') else None
         taxa_list['statuses'] = normalize_status(status) if status else None
 
+        taxa_list['id'] = o['taxon']['id'] if o['taxon'].get('id') else None
+
         if taxa_list not in endangered_taxa:
             endangered_taxa.append(taxa_list)
     return endangered_taxa # store this in redis for caching instead
