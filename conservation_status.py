@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import pandas as pd # type: ignore
 
+import os
 import redis # type: ignore
 import argparse
 import logging
@@ -11,7 +12,13 @@ import pyinaturalist as pin # type: ignore
 # -------------------------
 # Redis setup
 # -------------------------
-r = redis.Redis(host='127.0.0.1', port=6379, db=0, decode_responses=True)
+def get_redis():
+    return redis.Redis(
+        host=os.getenv("REDIS_HOST", "redis-db"),
+        port=6379,
+        db=0,
+        decode_responses=True
+    )
 
 # -------------------------
 # Logging setup
@@ -62,6 +69,7 @@ def grab_observations(place_id: int) -> list:
         place_id (int): The ID of the place to fetch observations for.
     Returns:
         list: A list of observations fetched from the iNaturalist API or Redis database.'''
+    r = get_redis()
 
     key = f'observations_{place_id}'
     if r.exists(key):
@@ -145,6 +153,9 @@ def get_species_info(place_name: str) -> list:
         place_name (str): The name of the place to include in the output.
     Returns:
         tuple: A tuple containing a message, a Plotly figure, a list of species records, and column definitions.'''
+
+    r = get_redis()
+    
     place_name_clean = place_name.strip().lower()
     place_id = grab_place_id(place_name_clean)
 
