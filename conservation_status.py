@@ -127,8 +127,6 @@ def parse_observations(obs: list) -> list:
     
     logging.debug(f"Parsing observations to extract taxa information.")
 
-    print(obs[0])
-
     endangered_taxa = []
     for o in obs:
         taxa_list = {}
