@@ -8,15 +8,69 @@ from conservation_status import get_species_info
 
 app = Dash(__name__)
 
+CARD_STYLE = {
+    "padding": "20px",
+    "borderRadius": "18px",
+    "boxShadow": "0 3px 10px rgba(0,0,0,.08)",
+    "backgroundColor": "white",
+    "textAlign": "center"
+}
+
 app.layout = html.Div([
-
-    html.H1("Endangered Species Dashboard"),
-
-    dcc.Input(
-        id="place-input",
-        value="Texas",
-        type="text"
+    html.H1(
+        "Threatened Species Conservation Explorer",
+        style={
+            "textAlign":"center",
+            "marginBottom":"30px"
+        }
     ),
+
+    # Search Controls
+    html.Div([
+
+        dcc.Input(
+            id="place-input",
+            value="Texas",
+            type="text",
+            style={
+                "width":"300px",
+                "padding":"10px",
+                "marginRight":"10px"
+            }
+        ),
+
+        html.Button(
+            "Load",
+            id="load-button",
+            n_clicks=0,
+            style={
+                "padding":"10px 20px"
+            }
+        )
+
+    ],
+    style={
+        "display":"flex",
+        "justifyContent":"center",
+        "marginBottom":"30px"
+    }),
+
+
+    # Metric cards
+    html.Div([
+
+        html.Div(id="species-card", style=CARD_STYLE),
+        html.Div(id="cr-card", style=CARD_STYLE),
+        html.Div(id="en-card", style=CARD_STYLE),
+        html.Div(id="groups-card", style=CARD_STYLE),
+
+    ],
+    style={
+        "display":"grid",
+        "gridTemplateColumns":"repeat(4,1fr)",
+        "gap":"20px",
+        "marginBottom":"30px"
+    }),
 
     html.Button(
         "Load",
