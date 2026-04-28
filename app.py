@@ -1,30 +1,32 @@
-from dash import Dash, html, dcc
-from dash import Input, Output, State
-import dash_ag_grid as dag
-import pandas as pd
-import plotly.express as px
+#!/usr/bin/env python3
+
+from dash import Dash, html, dcc, Input, Output, State  # type: ignore
+import dash_ag_grid as dag  # type: ignore
+import pandas as pd  # type: ignore
+import plotly.express as px  # type: ignore
 
 from conservation_status import get_species_info
 
 app = Dash(__name__)
 
+# cards
 CARD_STYLE = {
     "padding": "20px",
     "borderRadius": "18px",
     "boxShadow": "0 3px 10px rgba(0,0,0,.08)",
     "backgroundColor": "white",
-    "textAlign": "center"}
+    "textAlign": "center"
+}
 
+# layout
 app.layout = html.Div([
+
     html.H1(
         "Threatened Species Conservation Explorer",
-        style={
-            "textAlign":"center",
-            "marginBottom":"30px"
-        }
+        style={"textAlign": "center", "marginBottom": "30px"}
     ),
 
-    # Search Controls
+    # search
     html.Div([
 
         dcc.Input(
@@ -32,9 +34,9 @@ app.layout = html.Div([
             value="Texas",
             type="text",
             style={
-                "width":"300px",
-                "padding":"10px",
-                "marginRight":"10px"
+                "width": "300px",
+                "padding": "10px",
+                "marginRight": "10px"
             }
         ),
 
@@ -42,149 +44,137 @@ app.layout = html.Div([
             "Load",
             id="load-button",
             n_clicks=0,
-            style={
-                "padding":"10px 20px"
-            }
+            style={"padding": "10px 20px"}
         )
 
-    ],
-    style={
-        "display":"flex",
-        "justifyContent":"center",
-        "marginBottom":"30px"
+    ], style={
+        "display": "flex",
+        "justifyContent": "center",
+        "marginBottom": "30px"
     }),
 
-
-    # Metric cards
-    html.Div([
-
-        html.Div(id="species-card", style=CARD_STYLE),
-        html.Div(id="cr-card", style=CARD_STYLE),
-        html.Div(id="en-card", style=CARD_STYLE),
-        html.Div(id="groups-card", style=CARD_STYLE),
-
-    ],
-    style={
-        "display":"grid",
-        "gridTemplateColumns":"repeat(4,1fr)",
-        "gap":"20px",
-        "marginBottom":"30px"
-    }),
-
-    html.Br(),
-    html.Br(),
-
-    html.Div(id="summary"),
-    dcc.Loading(
-    type="circle",
-    children=[
-        dcc.Graph(id="status-plot"),
-        dag.AgGrid(
-            id="species-table",
-            rowData=[],
-            columnDefs=[],
-            defaultColDef={
-                "sortable": True,
-                "filter": True
-            }
-        )
-    ]),
-
-    # Filter
+    # filter
     html.Div([
 
         dcc.Dropdown(
             id="status-filter",
             options=[
-                {"label":"All","value":"all"},
-                {
-                    "label":"Critically Endangered",
-                    "value":"Critically Endangered"
-                },
-                {
-                    "label":"Endangered",
-                    "value":"Endangered"
-                },
-                {
-                    "label":"Vulnerable",
-                    "value":"Vulnerable"
-                },
-                {
-                    "label":"Imperiled",
-                    "value":"Imperiled"
-                },
-                {
-                    "label":"Critically Imperiled",
-                    "value":"Critically Imperiled"
-                }
+                {"label": "All", "value": "all"},
+                {"label": "Critically Endangered", "value": "Critically Endangered"},
+                {"label": "Endangered", "value": "Endangered"},
+                {"label": "Vulnerable", "value": "Vulnerable"},
+                {"label": "Imperiled", "value": "Imperiled"},
+                {"label": "Critically Imperiled", "value": "Critically Imperiled"},
             ],
             value="all",
-            style={"width":"300px"}
+            style={"width": "300px"}
         )
 
-    ],
-    style={"marginBottom":"30px"}),
-])
+    ], style={"marginBottom": "30px"}),
 
+    dcc.Loading(
+
+        type="circle",
+        children=[
+
+            html.Div(id="summary"),
+
+            # status histogram
+            dcc.Graph(id="status-plot"),
+
+            # table
+            dag.AgGrid(
+                id="species-table",
+                rowData=[],
+                columnDefs=[],
+                defaultColDef={
+                    "sortable": True,
+                    "filter": True,
+                    "resizable": True,
+                    "flex": 1
+                },
+                dashGridOptions={
+                    "pagination": True,
+                    "paginationPageSize": 15
+                },
+                style={"height": "700px", "width": "100%"}
+            )
+
+        ]
+    )
+
+], style={
+    "maxWidth": "1200px",
+    "margin": "0 auto",
+    "padding": "20px"
+})
 
 @app.callback(
-    Output("summary","children"),
-    Output("status-plot","figure"),
-    Output("species-table","rowData"),
-    Output("species-table","columnDefs"),
-    Input("load-button","n_clicks"),
-    State("place-input","value"),
-    Input("status-filter","value")
+    Output("summary", "children"),
+    Output("status-plot", "figure"),
+    Output("species-table", "rowData"),
+    Output("species-table", "columnDefs"),
+    Input("load-button", "n_clicks"),
+    State("place-input", "value"),
+    State("status-filter", "value")
 )
 def update_dashboard(n_clicks, place_name, status_filter):
 
     species = get_species_info(place_name)
 
     if not species:
+        empty_fig = px.bar(title="No data available")
         return (
-            "No data found",
-            {},
+            f"No data found for '{place_name}'",
+            empty_fig,
             [],
             []
         )
 
     df = pd.DataFrame(species)
 
+    # Filter
     if status_filter != "all":
-        df = df[
-            df["statuses"] == status_filter
-        ]
+        df = df[df["statuses"] == status_filter]
+
+    if df.empty:
+        empty_fig = px.bar(title="No matching results")
+        return (
+            "No species match selected filter",
+            empty_fig,
+            [],
+            []
+        )
+
+    # Histogram status distribution
     status_counts = (
         df["statuses"]
         .fillna("Unknown")
         .value_counts()
         .reset_index()
     )
+    status_counts.columns = ["Status", "Count"]
 
-    status_counts.columns = [
-        "Status",
-        "Count"
-    ]
-
-
-    fig = px.bar(
+    status_fig = px.bar(
         status_counts,
         x="Status",
         y="Count",
-        title=f"Conservation Status Distribution: {place_name}"
+        color="Status",
+        title="Conservation Status Distribution"
     )
 
+    # table columns
 
     columns = [
-        {"field":"name"},
-        {"field":"id"},
-        {"field":"statuses"}
+        {"field": "common_name", "headerName": "Common Name"},
+        {"field": "scientific_name", "headerName": "Scientific Name"},
+        {"field": "taxon_name", "headerName": "Taxonomic Group"},
+        {"field": "statuses", "headerName": "Status"}
     ]
 
-
     return (
-        f"{len(df)} endangered species found in {place_name}",
-        fig,
+        f"{len(df)} species found in {place_name}",
+        status_fig,
         df.to_dict("records"),
         columns
     )
