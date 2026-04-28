@@ -1,9 +1,11 @@
-    FROM python:3.12
+FROM python:3.12
 
-    RUN pip3 install pyinaturalist redis
+COPY requirements.txt .
 
-    COPY conservation_status.py /code/conservation_status.py
+RUN pip install --no-cache-dir -r requirements.txt
 
-    RUN chmod ugo+x /code/conservation_status.py
+COPY conservation_status.py /code/conservation_status.py
 
-    ENV PATH="/code:$PATH"
+RUN chmod ugo+x /code/conservation_status.py
+
+ENV PATH="/code:$PATH"

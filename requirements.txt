@@ -1,0 +1,7 @@
+dash==4.1.0
+dash-ag-grid==35.2.0
+pandas==3.0.2
+plotly==6.7.0
+redis==7.4.0
+pyinaturalist==0.21.1
+wikipedia==1.4.0
