@@ -115,6 +115,8 @@ def parse_observations(obs: list) -> list:
         obs (list): A list of observations where each observation is a dictionary containing taxon information.
     Returns:
         list: A list of dictionaries, each containing the name, ID, and conservation status of a taxon.'''
+    
+    logging.debug(f"Parsing observations to extract taxa information.")
 
     endangered_taxa = []
     for o in obs:
@@ -123,14 +125,16 @@ def parse_observations(obs: list) -> list:
         taxa_list['taxon_name'] = o['taxon']["iconic_taxon_name"] if o['taxon'].get("iconic_taxon_name") else None
         taxa_list['common_name'] = o['taxon']['preferred_common_name'] if o['taxon'].get('preferred_common_name') else None
         taxa_list['scientific_name'] = o['taxon']['name'] if o['taxon'].get('name') else None
-
         status = o['taxon'].get('conservation_status')['status_name'] if o['taxon'].get('conservation_status') else None
         taxa_list['statuses'] = normalize_status(status) if status else None
-
-        taxa_list['id'] = o['taxon']['id'] if o['taxon'].get('id') else None
-
+        taxa_list["photo_url"] = o['taxon']['default_photo']['medium_url'] if o['taxon'].get('default_photo') else None
+        taxa_list["taxon_id"] = o["taxon"]["id"] if o['taxon'].get('id') else None
+ 
         if taxa_list not in endangered_taxa:
             endangered_taxa.append(taxa_list)
+    
+    logging.debug(f"Extracted taxa from observations.")
+
     return endangered_taxa # store this in redis for caching instead
 
 def get_species_info(place_name: str) -> list:
