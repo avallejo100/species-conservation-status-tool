@@ -82,6 +82,7 @@ def grab_observations(place_id: int) -> list:
             per_page=500,
             csi=["EN", "CR", "VU"]
         )["results"]
+        r.set(key, json.dumps(observations, default=str), ex=86400)
     return observations
 
 def normalize_status(s: str | None) -> str | None:
@@ -126,6 +127,8 @@ def parse_observations(obs: list) -> list:
     
     logging.debug(f"Parsing observations to extract taxa information.")
 
+    print(obs[0])
+
     endangered_taxa = []
     for o in obs:
         taxa_list = {}
@@ -154,30 +157,21 @@ def get_species_info(place_name: str) -> list:
     Returns:
         tuple: A tuple containing a message, a Plotly figure, a list of species records, and column definitions.'''
 
-    r = get_redis()
-    
     place_name_clean = place_name.strip().lower()
     place_id = grab_place_id(place_name_clean)
 
     if place_id is None:
-        logging.error(f"Place name '{place_name}' not found in iNaturalist API.")
+        logging.error(f"Place '{place_name}' not found")
         return []
-    
-    key = f'observations_{place_id}'
 
-    if not r.exists(key):
-        logging.debug(f"No cached data for place_id {place_id}. Fetching from iNaturalist API.")
-        observations = grab_observations(place_id)
-        endangered_taxa = parse_observations(observations)
-        
-        r.set(key, json.dumps(endangered_taxa, default=str))
-    else:
-        logging.debug(f"Cached data found for place_id {place_id}. Fetching from Redis.")
-        endangered_taxa = json.loads(r.get(key))
-    
+    observations = grab_observations(place_id)
+
+    endangered_taxa = parse_observations(observations)
+
     if not endangered_taxa:
-        logging.error(f"No endangered species data found for place_id {place_id}.")
+        logging.error(f"No taxa found for place_id {place_id}")
         return []
+
     return endangered_taxa
 
 
