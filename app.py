@@ -13,8 +13,7 @@ CARD_STYLE = {
     "borderRadius": "18px",
     "boxShadow": "0 3px 10px rgba(0,0,0,.08)",
     "backgroundColor": "white",
-    "textAlign": "center"
-}
+    "textAlign": "center"}
 
 app.layout = html.Div([
     html.H1(
@@ -72,12 +71,6 @@ app.layout = html.Div([
         "marginBottom":"30px"
     }),
 
-    html.Button(
-        "Load",
-        id="load-button",
-        n_clicks=0
-    ),
-
     html.Br(),
     html.Br(),
 
@@ -95,8 +88,42 @@ app.layout = html.Div([
                 "filter": True
             }
         )
-    ]
-    )
+    ]),
+
+    # Filter
+    html.Div([
+
+        dcc.Dropdown(
+            id="status-filter",
+            options=[
+                {"label":"All","value":"all"},
+                {
+                    "label":"Critically Endangered",
+                    "value":"Critically Endangered"
+                },
+                {
+                    "label":"Endangered",
+                    "value":"Endangered"
+                },
+                {
+                    "label":"Vulnerable",
+                    "value":"Vulnerable"
+                },
+                {
+                    "label":"Imperiled",
+                    "value":"Imperiled"
+                },
+                {
+                    "label":"Critically Imperiled",
+                    "value":"Critically Imperiled"
+                }
+            ],
+            value="all",
+            style={"width":"300px"}
+        )
+
+    ],
+    style={"marginBottom":"30px"}),
 ])
 
 
@@ -106,9 +133,10 @@ app.layout = html.Div([
     Output("species-table","rowData"),
     Output("species-table","columnDefs"),
     Input("load-button","n_clicks"),
-    State("place-input","value")
+    State("place-input","value"),
+    Input("status-filter","value")
 )
-def update_dashboard(n_clicks, place_name):
+def update_dashboard(n_clicks, place_name, status_filter):
 
     species = get_species_info(place_name)
 
@@ -122,7 +150,10 @@ def update_dashboard(n_clicks, place_name):
 
     df = pd.DataFrame(species)
 
-
+    if status_filter != "all":
+        df = df[
+            df["statuses"] == status_filter
+        ]
     status_counts = (
         df["statuses"]
         .fillna("Unknown")
