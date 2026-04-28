@@ -116,7 +116,7 @@ app.layout = html.Div([
     Output("species-table", "columnDefs"),
     Input("load-button", "n_clicks"),
     State("place-input", "value"),
-    State("status-filter", "value")
+    Input("status-filter", "value")
 )
 def update_dashboard(n_clicks, place_name, status_filter):
 
