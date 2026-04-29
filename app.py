@@ -82,13 +82,29 @@ app.layout = html.Div([
              # histogram + pie   
             html.Div([
 
-            dcc.Graph(id="status-plot"),
-            dcc.Graph(id="taxa-pie")
+                html.Div(
+                    dcc.Graph(id="status-plot"),
+                    style={
+                        "border": "2px solid #ddd",
+                        "borderRadius": "10px",
+                        "padding": "10px"
+                    }
+                ),
+
+                html.Div(
+                    dcc.Graph(id="taxa-pie"),
+                    style={
+                        "border": "2px solid #ddd",
+                        "borderRadius": "10px",
+                        "padding": "10px"
+                    }
+                )
 
             ], style={
                 "display": "grid",
                 "gridTemplateColumns": "1fr 1fr",
-                "gap": "20px"
+                "gap": "20px",
+                "marginBottom": "30px"
             }),
 
             # table
@@ -132,9 +148,10 @@ def update_dashboard(n_clicks, status_filter, place_name):
 
     species = get_species_info(place_name)
 
+    empty_fig = px.bar(title="No data available")
+    empty_pie = px.pie(title="No data available")
+
     if not species:
-        empty_fig = px.bar(title="No data available")
-        empty_pie = px.pie(title="No data available")
 
         return (
             f"No data found for '{place_name}'",
@@ -146,9 +163,13 @@ def update_dashboard(n_clicks, status_filter, place_name):
 
     df = pd.DataFrame(species)
 
+    df_all = df.copy()
+    df_table = df.copy()
+
+
     # Filter
     if status_filter != "all":
-        df = df[df["statuses"] == status_filter]
+        df_table = df_table[df_table["statuses"] == status_filter]
 
     if df.empty:
         empty_fig = px.bar(title="No matching results")
@@ -164,7 +185,7 @@ def update_dashboard(n_clicks, status_filter, place_name):
 
     # Histogram status distribution
     status_counts = (
-        df["statuses"]
+        df_all["statuses"]
         .fillna("Unknown")
         .value_counts()
         .reset_index()
@@ -181,7 +202,7 @@ def update_dashboard(n_clicks, status_filter, place_name):
 
     # Taxa pie chart
     taxa_counts = (
-        df["taxon_name"]
+        df_all["taxon_name"]
         .fillna("Unknown")
         .value_counts()
         .reset_index()
@@ -210,7 +231,7 @@ def update_dashboard(n_clicks, status_filter, place_name):
         f"{len(df)} species found in {place_name}",
         status_fig,
         taxa_fig,
-        df.to_dict("records"),
+        df_table.to_dict("records"),
         columns
     )
 
