@@ -4,110 +4,115 @@ from dash import Dash, html, dcc, Input, Output, State  # type: ignore
 import dash_ag_grid as dag  # type: ignore
 import pandas as pd  # type: ignore
 import plotly.express as px  # type: ignore
+import dash_bootstrap_components as dbc  # type: ignore
 
 from conservation_status import get_species_info
 
-app = Dash(__name__)
 
-# cards
-CARD_STYLE = {
-    "padding": "20px",
-    "borderRadius": "18px",
-    "boxShadow": "0 3px 10px rgba(0,0,0,.08)",
-    "backgroundColor": "white",
-    "textAlign": "center"
-}
+app = Dash(__name__, external_stylesheets=[dbc.themes.MORPH, dbc.icons.FONT_AWESOME])
 
-# layout
-app.layout = html.Div([
+# -------------------------------------------------
+# Layout
+# -------------------------------------------------
 
-    html.H1(
-        "Threatened Species Conservation Explorer",
-        style={"textAlign": "center", "marginBottom": "30px"}
-    ),
+app.layout = dbc.Container([
 
-    # search
-    html.Div([
+    # Title
+    dbc.Row([
+        dbc.Col(
+            html.H1(
+                "Species Conservation Dashboard",
+                className="text-center fw-bold display-6 mt-4 mb-6",
+                style={"color": "#163534"}
+            )
+        )
+    ], className="mb-4"),
 
-        dcc.Input(
-            id="place-input",
-            value="Texas",
-            type="text",
-            style={
-                "width": "300px",
-                "padding": "10px",
-                "marginRight": "10px"
-            }
+    # Search
+    dbc.Row([
+
+        dbc.Col([
+            dbc.Input(
+                id="place-input",
+                value="Texas",
+                type="text",
+                style={"maxWidth": "300px"}
+            )
+        ], width="auto"),
+
+        dbc.Col([
+            dbc.Button(
+                "Load",
+                id="load-button",
+                n_clicks=0,
+                color="primary"
+            )
+        ], width="auto")
+
+    ], justify="center", className="mb-4"),
+
+    # summary
+    html.Div(id="summary", className="mb-3"),
+
+    # Charts
+    dbc.Row([
+
+        dbc.Col(
+            dbc.Card(
+                dbc.CardBody(
+                    dcc.Graph(id="status-plot")
+                ),
+                className="mb-4"
+            ),
+            md=6
         ),
 
-        html.Button(
-            "Load",
-            id="load-button",
-            n_clicks=0,
-            style={"padding": "10px 20px"}
-        )
+        dbc.Col(
+            dbc.Card(
+                dbc.CardBody(
+                    dcc.Graph(id="taxa-pie")
+                ),
+                className="mb-4"
+            ),
+            md=6
+        ),
 
-    ], style={
-        "display": "flex",
-        "justifyContent": "center",
-        "marginBottom": "30px"
-    }),
+    ]),
 
-    # filter
-    html.Div([
+    # Filter
+    dbc.Row([
+        dbc.Col([
 
-        dcc.Dropdown(
-            id="status-filter",
-            options=[
-                {"label": "All", "value": "all"},
-                {"label": "Critically Endangered", "value": "Critically Endangered"},
-                {"label": "Endangered", "value": "Endangered"},
-                {"label": "Vulnerable", "value": "Vulnerable"},
-                {"label": "Imperiled", "value": "Imperiled"},
-                {"label": "Critically Imperiled", "value": "Critically Imperiled"},
-            ],
-            value="all",
-            style={"width": "300px"}
-        )
-
-    ], style={"marginBottom": "30px"}),
-
-    dcc.Loading(
-
-        type="circle",
-        children=[
-
-            html.Div(id="summary"),
-
-             # histogram + pie   
             html.Div([
 
-                html.Div(
-                    dcc.Graph(id="status-plot"),
-                    style={
-                        "border": "2px solid #ddd",
-                        "borderRadius": "10px",
-                        "padding": "10px"
-                    }
+                html.Label(
+                    "Filter Table",
+                    className="fw-bold mb-1"
                 ),
 
-                html.Div(
-                    dcc.Graph(id="taxa-pie"),
-                    style={
-                        "border": "2px solid #ddd",
-                        "borderRadius": "10px",
-                        "padding": "10px"
-                    }
+                dcc.Dropdown(
+                    id="status-filter",
+                    options=[
+                        {"label": "All", "value": "all"},
+                        {"label": "Critically Endangered", "value": "Critically Endangered"},
+                        {"label": "Endangered", "value": "Endangered"},
+                        {"label": "Vulnerable", "value": "Vulnerable"},
+                        {"label": "Imperiled", "value": "Imperiled"},
+                        {"label": "Critically Imperiled", "value": "Critically Imperiled"},
+                    ],
+                    value="all"
                 )
 
-            ], style={
-                "display": "grid",
-                "gridTemplateColumns": "1fr 1fr",
-                "gap": "20px",
-                "marginBottom": "30px"
-            }),
+            ])
 
-            # table
+        ], width=4)
+    ], className="mb-3"),
+
+    # Table
+    dbc.Row([
+
+        dbc.Col(
+
             dag.AgGrid(
                 id="species-table",
                 rowData=[],
@@ -125,14 +130,16 @@ app.layout = html.Div([
                 style={"height": "700px", "width": "100%"}
             )
 
-        ]
-    )
+        )
 
-], style={
-    "maxWidth": "1200px",
-    "margin": "0 auto",
-    "padding": "20px"
-})
+    ])
+
+], fluid=True)
+
+
+# -------------------------------------------------
+# Callback
+# -------------------------------------------------
 
 @app.callback(
     Output("summary", "children"),
@@ -141,51 +148,44 @@ app.layout = html.Div([
     Output("species-table", "rowData"),
     Output("species-table", "columnDefs"),
     Input("load-button", "n_clicks"),
-    Input("status-filter", "value"),
-    State("place-input", "value")
+    State("place-input", "value"),
+    Input("status-filter", "value")
 )
-def update_dashboard(n_clicks, status_filter, place_name):
+def update_dashboard(n_clicks, place_name, status_filter):
 
     species = get_species_info(place_name)
 
-    empty_fig = px.bar(title="No data available")
-    empty_pie = px.pie(title="No data available")
-
     if not species:
-
+        empty_fig = px.bar(title="No data available")
         return (
             f"No data found for '{place_name}'",
             empty_fig,
-            empty_pie,
+            empty_fig,
             [],
             []
         )
 
     df = pd.DataFrame(species)
 
-    df_all = df.copy()
+    # filter for conservation status
     df_table = df.copy()
 
-
-    # Filter
     if status_filter != "all":
         df_table = df_table[df_table["statuses"] == status_filter]
 
-    if df.empty:
+    if df_table.empty:
         empty_fig = px.bar(title="No matching results")
-        empty_pie = px.pie(title="No matching results")
-
         return (
             "No species match selected filter",
             empty_fig,
-            empty_pie,
+            empty_fig,
             [],
             []
         )
 
-    # Histogram status distribution
+    # Histogram
     status_counts = (
-        df_all["statuses"]
+        df["statuses"]
         .fillna("Unknown")
         .value_counts()
         .reset_index()
@@ -200,14 +200,13 @@ def update_dashboard(n_clicks, status_filter, place_name):
         title="Conservation Status Distribution"
     )
 
-    # Taxa pie chart
+    # Pie chart
     taxa_counts = (
-        df_all["taxon_name"]
+        df["taxon_name"]
         .fillna("Unknown")
         .value_counts()
         .reset_index()
     )
-
     taxa_counts.columns = ["Taxonomic Group", "Count"]
 
     taxa_fig = px.pie(
@@ -218,8 +217,7 @@ def update_dashboard(n_clicks, status_filter, place_name):
         hole=0.35
     )
 
-    # table columns
-
+    # Table
     columns = [
         {"field": "common_name", "headerName": "Common Name"},
         {"field": "scientific_name", "headerName": "Scientific Name"},
@@ -228,13 +226,17 @@ def update_dashboard(n_clicks, status_filter, place_name):
     ]
 
     return (
-        f"{len(df)} species found in {place_name}",
+        f"{len(df_table)} species shown from {place_name}",
         status_fig,
         taxa_fig,
         df_table.to_dict("records"),
         columns
     )
 
+
+# -------------------------------------------------
+# Run
+# -------------------------------------------------
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=True)
