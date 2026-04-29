@@ -79,8 +79,17 @@ app.layout = html.Div([
 
             html.Div(id="summary"),
 
-            # status histogram
+             # histogram + pie   
+            html.Div([
+
             dcc.Graph(id="status-plot"),
+            dcc.Graph(id="taxa-pie")
+
+            ], style={
+                "display": "grid",
+                "gridTemplateColumns": "1fr 1fr",
+                "gap": "20px"
+            }),
 
             # table
             dag.AgGrid(
@@ -112,21 +121,25 @@ app.layout = html.Div([
 @app.callback(
     Output("summary", "children"),
     Output("status-plot", "figure"),
+    Output("taxa-pie", "figure"),
     Output("species-table", "rowData"),
     Output("species-table", "columnDefs"),
     Input("load-button", "n_clicks"),
-    State("place-input", "value"),
-    Input("status-filter", "value")
+    Input("status-filter", "value"),
+    State("place-input", "value")
 )
-def update_dashboard(n_clicks, place_name, status_filter):
+def update_dashboard(n_clicks, status_filter, place_name):
 
     species = get_species_info(place_name)
 
     if not species:
         empty_fig = px.bar(title="No data available")
+        empty_pie = px.pie(title="No data available")
+
         return (
             f"No data found for '{place_name}'",
             empty_fig,
+            empty_pie,
             [],
             []
         )
@@ -139,9 +152,12 @@ def update_dashboard(n_clicks, place_name, status_filter):
 
     if df.empty:
         empty_fig = px.bar(title="No matching results")
+        empty_pie = px.pie(title="No matching results")
+
         return (
             "No species match selected filter",
             empty_fig,
+            empty_pie,
             [],
             []
         )
@@ -163,6 +179,24 @@ def update_dashboard(n_clicks, place_name, status_filter):
         title="Conservation Status Distribution"
     )
 
+    # Taxa pie chart
+    taxa_counts = (
+        df["taxon_name"]
+        .fillna("Unknown")
+        .value_counts()
+        .reset_index()
+    )
+
+    taxa_counts.columns = ["Taxonomic Group", "Count"]
+
+    taxa_fig = px.pie(
+        taxa_counts,
+        names="Taxonomic Group",
+        values="Count",
+        title="Taxonomic Group Breakdown",
+        hole=0.35
+    )
+
     # table columns
 
     columns = [
@@ -175,6 +209,7 @@ def update_dashboard(n_clicks, place_name, status_filter):
     return (
         f"{len(df)} species found in {place_name}",
         status_fig,
+        taxa_fig,
         df.to_dict("records"),
         columns
     )
