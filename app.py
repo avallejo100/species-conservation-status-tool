@@ -255,7 +255,39 @@ def update_dashboard(n_clicks, place_name, status_filter):
         {"field": "common_name", "headerName": "Common Name"},
         {"field": "scientific_name", "headerName": "Scientific Name"},
         {"field": "taxon_name", "headerName": "Taxonomic Group"},
-        {"field": "statuses", "headerName": "Status"}
+        {"field": "statuses", "headerName": "Status"},
+        {
+    "field": "statuses",
+    "headerName": "Status",
+    "cellStyle": {
+        "styleConditions": [
+            {
+                "condition": "params.value == 'Critically Endangered'",
+                "style": {"backgroundColor": "#f8d7da"}
+            },
+            {
+                "condition": "params.value == 'Endangered'",
+                "style": {"backgroundColor": "#fce5cd"}
+            },
+            {
+                "condition": "params.value == 'Vulnerable'",
+                "style": {"backgroundColor": "#fff3cd"}
+            },
+            {
+                "condition": "params.value == 'Imperiled'",
+                "style": {"backgroundColor": "#d1ecf1"}
+            },
+            {
+                "condition": "params.value == 'Critically Imperiled'",
+                "style": {"backgroundColor": "#e2d6f3"}
+            },
+            {
+                "condition": "params.value == 'Other'",
+                "style": {"backgroundColor": "#e2e3e5"}
+            }
+        ]
+    }
+}
     ]
 
     return (
