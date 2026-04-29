@@ -5,11 +5,45 @@ import dash_ag_grid as dag  # type: ignore
 import pandas as pd  # type: ignore
 import plotly.express as px  # type: ignore
 import dash_bootstrap_components as dbc  # type: ignore
+import wikipedia  # type: ignore
 
 from conservation_status import get_species_info
 
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.MINTY])
+
+# -------------------------------------------------
+# Species detail helper
+# -------------------------------------------------
+
+def get_species_summary(scientific_name):
+    """
+    Retrieve plain-text species summary from Wikipedia.
+    """
+    summary = "Description unavailable."
+
+    if scientific_name:
+        try:
+            summary = wikipedia.summary(
+                scientific_name,
+                sentences=2,
+                auto_suggest=True
+            )
+
+        except wikipedia.DisambiguationError as e:
+            try:
+                summary = wikipedia.summary(
+                    e.options[0],
+                    sentences=2,
+                    auto_suggest=True
+                )
+            except Exception:
+                pass
+
+        except Exception:
+            pass
+
+    return summary
 
 # -------------------------------------------------
 # Layout
@@ -25,7 +59,8 @@ app.layout = dbc.Container([
         html.H1(
             "Threatened Species Conservation Explorer",
             style={
-                "fontWeight": "700",
+                "fontWeight": "600",
+                "fontSize": "30px",
                 "letterSpacing": "1px",
                 "color": "#1b4332",
                 "marginBottom": "5px"
@@ -35,7 +70,7 @@ app.layout = dbc.Container([
         html.Div(
             "Interactive biodiversity & conservation analytics dashboard",
             style={
-                "fontSize": "16px",
+                "fontSize": "20px",
                 "color": "#6c757d",
                 "marginBottom": "10px"
             }
@@ -74,6 +109,9 @@ app.layout = dbc.Container([
 
     ], justify="center", className="mb-4"),
 
+    dcc.Loading(
+        type="circle",
+        children=[
     # summary
     html.Div(id="summary", className="fw-bold fs-5 mb-3 text-dark"),
 
@@ -150,7 +188,8 @@ app.layout = dbc.Container([
                 },
                 dashGridOptions={
                     "pagination": True,
-                    "paginationPageSize": 15
+                    "paginationPageSize": 15,
+                    "rowSelection": "single"
                 },
                 className="ag-theme-quartz",
                 style={"height": "700px",
@@ -159,11 +198,24 @@ app.layout = dbc.Container([
                        "borderRadius": "10px",
                        "overflow": "hidden",
                        "boxShadow": "0 2px 10px rgba(0,0,0,0.08)"}
+                )
+            ),
+            # detail panel
+            dbc.Col(
+                dbc.Card(
+                    dbc.CardBody(
+                        html.Div(
+                            id="species-detail",
+                            children="Select a species to view details."
+                        )
+                    )
+                ),
+            md=4
             )
-
-        )
+        ])
     ])
-],  fluid=True,
+],
+  fluid=True,
     style={"backgroundColor": "#eff6e1",
            "paddingBottom": "30px",
            "paddingLeft": "30px",
@@ -171,8 +223,9 @@ app.layout = dbc.Container([
     )
 
 
+
 # -------------------------------------------------
-# Callback
+# Main Callback
 # -------------------------------------------------
 
 @app.callback(
@@ -182,10 +235,11 @@ app.layout = dbc.Container([
     Output("species-table", "rowData"),
     Output("species-table", "columnDefs"),
     Input("load-button", "n_clicks"),
+    Input("place-input", "n_submit"),
     State("place-input", "value"),
     Input("status-filter", "value")
 )
-def update_dashboard(n_clicks, place_name, status_filter):
+def update_dashboard(n_clicks, n_submit, place_name, status_filter):
 
     species = get_species_info(place_name)
 
@@ -298,10 +352,61 @@ def update_dashboard(n_clicks, place_name, status_filter):
         columns
     )
 
+# -------------------------------------------------
+# Detail Callback
+# -------------------------------------------------
+
+@app.callback(
+    Output("species-detail","children"),
+    Input("species-table","selectedRows")
+)
+def show_species_detail(selected_rows):
+
+    if not selected_rows:
+        return "Select a species to view details."
+
+    row = selected_rows[0]
+
+    scientific = row.get("scientific_name")
+    common = row.get("common_name")
+    status = row.get("statuses")
+    photo = row.get("photo_url")
+
+    summary = get_species_summary(scientific)
+
+    return html.Div([
+
+        html.H4(common or scientific),
+
+        html.P([
+            html.B("Scientific name: "),
+            html.I(scientific)
+        ]),
+
+        html.P([
+            html.B("Status: "),
+            status
+        ]),
+
+        html.Hr(),
+
+        html.Img(
+            src=photo,
+            style={
+                "width":"100%",
+                "borderRadius":"10px",
+                "marginBottom":"15px"
+            }
+        ) if photo else html.Div("No image available"),
+
+        html.P(summary)
+
+    ])
+
 
 # -------------------------------------------------
 # Run
 # -------------------------------------------------
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=8050, debug=True)
+    app.run(host="0.0.0.0", port=8050, debug=True)
