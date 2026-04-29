@@ -9,7 +9,7 @@ import dash_bootstrap_components as dbc  # type: ignore
 from conservation_status import get_species_info
 
 
-app = Dash(__name__, external_stylesheets=[dbc.themes.MORPH, dbc.icons.FONT_AWESOME])
+app = Dash(__name__, external_stylesheets=[dbc.themes.MINTY])
 
 # -------------------------------------------------
 # Layout
@@ -20,11 +20,32 @@ app.layout = dbc.Container([
     # Title
     dbc.Row([
         dbc.Col(
-            html.H1(
-                "Species Conservation Dashboard",
-                className="text-center fw-bold display-6 mt-4 mb-6",
-                style={"color": "#163534"}
-            )
+            html.Div(
+    [
+        html.H1(
+            "Threatened Species Conservation Explorer",
+            style={
+                "fontWeight": "700",
+                "letterSpacing": "1px",
+                "color": "#1b4332",
+                "marginBottom": "5px"
+            }
+        ),
+
+        html.Div(
+            "Interactive biodiversity & conservation analytics dashboard",
+            style={
+                "fontSize": "16px",
+                "color": "#6c757d",
+                "marginBottom": "10px"
+            }
+        )
+    ],
+    style={
+        "textAlign": "center",
+        "paddingTop": "20px"
+    }
+)
         )
     ], className="mb-4"),
 
@@ -36,7 +57,9 @@ app.layout = dbc.Container([
                 id="place-input",
                 value="Texas",
                 type="text",
-                style={"maxWidth": "300px"}
+                style={"width": "350px",
+                       "fontSize": "18px",
+                       "padding": "10px"}
             )
         ], width="auto"),
 
@@ -52,11 +75,11 @@ app.layout = dbc.Container([
     ], justify="center", className="mb-4"),
 
     # summary
-    html.Div(id="summary", className="mb-3"),
+    html.Div(id="summary", className="fw-bold fs-5 mb-3 text-dark"),
 
     # Charts
     dbc.Row([
-
+        # Histogram
         dbc.Col(
             dbc.Card(
                 dbc.CardBody(
@@ -66,7 +89,7 @@ app.layout = dbc.Container([
             ),
             md=6
         ),
-
+        # Pie chart
         dbc.Col(
             dbc.Card(
                 dbc.CardBody(
@@ -76,8 +99,10 @@ app.layout = dbc.Container([
             ),
             md=6
         ),
-
-    ]),
+    ],
+    justify="center",
+    className="mb-4"
+),
 
     # Filter
     dbc.Row([
@@ -86,8 +111,8 @@ app.layout = dbc.Container([
             html.Div([
 
                 html.Label(
-                    "Filter Table",
-                    className="fw-bold mb-1"
+                    "Conservation Status Filter:",
+                    className="fw-bold mb-1 text-dark"
                 ),
 
                 dcc.Dropdown(
@@ -127,14 +152,23 @@ app.layout = dbc.Container([
                     "pagination": True,
                     "paginationPageSize": 15
                 },
-                style={"height": "700px", "width": "100%"}
+                className="ag-theme-quartz",
+                style={"height": "700px",
+                       "width": "100%",
+                       "border": "1px solid #e0e0e0",
+                       "borderRadius": "10px",
+                       "overflow": "hidden",
+                       "boxShadow": "0 2px 10px rgba(0,0,0,0.08)"}
             )
 
         )
-
     ])
-
-], fluid=True)
+],  fluid=True,
+    style={"backgroundColor": "#eff6e1",
+           "paddingBottom": "30px",
+           "paddingLeft": "30px",
+           "paddingRight": "30px"}
+    )
 
 
 # -------------------------------------------------
@@ -213,8 +247,7 @@ def update_dashboard(n_clicks, place_name, status_filter):
         taxa_counts,
         names="Taxonomic Group",
         values="Count",
-        title="Taxonomic Group Breakdown",
-        hole=0.35
+        title="Taxonomic Group Breakdown"
     )
 
     # Table
@@ -239,4 +272,4 @@ def update_dashboard(n_clicks, place_name, status_filter):
 # -------------------------------------------------
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8050, debug=True)
+    app.run(host="127.0.0.1", port=8050, debug=True)
