@@ -59,7 +59,9 @@ def grab_place_id(name: str) -> int | None:
     Returns:
         int: The ID of the place.
     '''
+    logging.debug(f"Grabbing place ID for place name: {name}")
     response = pin.get_places_autocomplete(name)
+    logging.debug(f"Received data from iNaturalist API")
     return response["results"][0]["id"] if response["results"] else None
 
 def grab_observations(place_id: int) -> list:
@@ -93,6 +95,7 @@ def normalize_status(s: str | None) -> str | None:
     Returns:
         str or None: The normalized conservation status string.
     """
+    logging.debug(f"Normalizing conservation status")
     if not s:
         return "Unknown"
 
@@ -105,16 +108,22 @@ def normalize_status(s: str | None) -> str | None:
     critically_imperiled = ["critically imperiled", "critically imperiled (g1)", "critically imperiled (s1)"]
 
     if s in vulnerable:
+        logging.debug(f"Status normalized to 'Vulnerable'")
         return "Vulnerable"
     elif s in endangered:
+        logging.debug(f"Status normalized to 'Endangered'")
         return "Endangered"
     elif s in critically_endangered:
+        logging.debug(f"Status normalized to 'Critically Endangered'")
         return "Critically Endangered"
     elif s in imperiled:
+        logging.debug(f"Status normalized to 'Imperiled'")
         return "Imperiled"
     elif s in critically_imperiled:
+        logging.debug(f"Status normalized to 'Critically Imperiled'")
         return "Critically Imperiled"
     else:
+        logging.debug(f"Status does not match known categories. Normalized to 'Other'")
         return "Other"
 
 def parse_observations(obs: list) -> list:
@@ -148,9 +157,8 @@ def parse_observations(obs: list) -> list:
 
 def get_species_info(place_name: str) -> list:
     '''
-    Retrieves species information for a given place ID and name, utilizing Redis for caching.
+    Retrieves species information for a given place name, utilizing Redis for caching.
     Args:
-        place_id (int): The ID of the place to fetch species information for.
         place_name (str): The name of the place to include in the output.
     Returns:
         tuple: A tuple containing a message, a Plotly figure, a list of species records, and column definitions.'''
