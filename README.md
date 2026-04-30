@@ -6,6 +6,10 @@ The Species Conservation tool uses data from the iNaturalist API to bring awaren
 
 ## Features
 - Search species by location (e.g., state or region)
+    - Location must follow specific format:
+        - City, State (ex: Austin, Texas)
+        - Country (ex: Canada)
+        - Region/Province (ex: Chihuahua)
 - Interactive dashboards:
     - Conservation status distribution (bar chart)
     - Taxonomic group breakdown (pie chart)
