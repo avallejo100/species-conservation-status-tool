@@ -2,7 +2,7 @@
 
 The Species Conservation tool uses data from the iNaturalist API to bring awareness to species with conservation concerns in specified geographic regions. Given a location, this tool retrieves information on different species and their conservation status from the iNaturalist API. The species included are classified as threatened, vulnerable, or endangered based on systems like NatureServe and the IUCN. The goal of the project is to make it easier to discover species of conservation interest that have been observed in a particular area using publicly available and citizen collected biodiversity data. Available as a containerized tool, this repository contains everything needed to launch and interact with the conservation tool dashboard. 
 
-<img src="images/dashboard-head.png" width="400">
+<img src="images/dashboard-head.png" width="500">
 
 ## Features
 - Search species by location (e.g., state or region)
@@ -76,7 +76,7 @@ If running outside of Docker:
     - Detail panel (Wikipedia summary lookup)
 - Filters update the displayed dataset dynamically
 
-<img src="images/table-and-species-detail.png" width="400">
+<img src="images/table-and-species-detail.png" width="500">
 
 ## AI Usage
 AI was not used in any portion of the code of this project. AI was used partially in this README only where noted.
